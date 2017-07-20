@@ -1,0 +1,211 @@
+#!/bin/sh
+
+# TODO:
+# make the header reassemble correctly!! (for now just set HEADER_DIRECTIVES=false)
+# LABELS:
+# make labels work in general
+# wla-dx style relative jump labels
+# "routine" labels/formatting, and "jump" labels
+# UNOBFUSCATION:
+# rst and irq vector comment labels (comments passed to gbdis)
+# cgb_hardware.i support??? (defines passed to gbdis)
+# misc helpful info that can be deduced, like bank switches, etc
+# COOL STUFF:
+# optionally separate out banks into separate .asm files? and so common.i too?
+# find and extract bin data?
+
+# program vars
+FILE=$1 # the file to disassemble
+GBINFO="./gbinfo" # the gbinfo program
+GBDIS="./gbdis" # the gbdis program
+shift
+OPTIONS=$@ # options to pass to the dissasembler
+LABELS=false # generate labels? *experimental*
+HEADER_DIRECTIVES=true # generate handy wla-gb header directives?
+                       # (instead of including raw header bytes)
+
+# make sure there was one given!
+if [ -z $FILE ]
+then
+	echo "give me a file to disassemble!"
+	exit
+fi
+
+BANKS="`$GBINFO --banks $FILE`" # get how many banks in the rom
+CGBFLAG="`$GBINFO --format --cgb $FILE`" # cgb compatibility byte
+NEWLICENSEECODE="`$GBINFO --ignorenull --newlicensee $FILE`"
+
+if [ $LABELS == true ]
+then
+	# get the jump locations for the home bank
+	JUMPS_HOME=`$GBDIS --length 100 --find < $FILE && $GBDIS --offset 150 --length 3eb0 --find < $FILE`
+
+	# get the jump locations for all other banks together
+	JUMPS_REST=""
+	BANK=1
+	while [ $BANK -lt $BANKS ]
+	do
+		let "SKIP = ($BANK - 1) * 0x4000"
+		JUMPS_REST="$JUMPS_REST `$GBDIS --offset 4000 --length 4000 --skip \`printf "%X" $SKIP\` --find < $FILE`"
+		((BANK++))
+	done
+
+	# get all the jump locations in the entire rom together
+	JUMPS_ALL="$JUMPS_HOME $JUMPS_REST"
+	JUMPS_ALL=`echo \`printf '%s\n' $JUMPS_ALL | sort -u\``
+fi
+
+# some commentary at the top of the output
+echo "; disassembled by gbdisasm"
+echo "; written by megaloler/aardbei <megalolerl9000@gmail.com>"
+echo "; dissasembly of file \"$FILE\""
+echo
+
+# print out the gameboy's rom memory map for wla-gb
+echo ".memorymap"
+echo -e "\tslotsize \$4000"
+echo -e "\tdefaultslot 1"
+echo -e "\tslot 0 \$0000"
+echo -e "\tslot 1 \$4000"
+echo ".endme"
+echo
+
+# and information about banks in this rom
+echo ".banksize \$4000"
+echo ".rombanks $BANKS"
+echo
+
+# tell wla-gb about header information
+if [ $HEADER_DIRECTIVES == true ]
+then
+	echo ".gbheader"
+	echo -e "\tname \"`$GBINFO --ignorenull --fulltitle $FILE`\""
+	if [ "$NEWLICENSEECODE" == "" ]
+	then
+		echo -e "\tlicenseecodeold `$GBINFO --format --oldlicensee $FILE`"
+	else
+		echo -e "\tlicenseecodenew \"`$GBINFO --newlicensee $FILE`\""
+	fi
+	echo -e "\tcartridgetype `$GBINFO --format --type $FILE`"
+	echo -e "\tramsize `$GBINFO --format --ram $FILE`"
+	echo -e "\tcountrycode `$GBINFO --format --dest $FILE`"
+	echo -e "\tnintendologo"
+	if [ "$CGBFLAG" == "\$80" ]
+	then
+		echo -e "\tromgbc"
+	elif [ "$CGBFLAG" == "\$C0" ]
+	then
+		echo -e "\tromgcbonly"
+	else
+		echo -e "\tromdmg"
+	fi
+	echo ".endgb"
+	echo
+fi
+
+# now let's start disassembling
+echo ".bank 0 slot 0"
+echo ".org \$0"
+echo
+
+# starting with the rst/interrupt vector table
+echo "; rst/interrupt vector table"
+
+# first do the rst vector table
+echo "; rst \$00"
+$GBDIS --offset 0 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$08"
+$GBDIS --offset 8 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$10"
+$GBDIS --offset 10 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$18"
+$GBDIS --offset 18 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$20"
+$GBDIS --offset 20 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$28"
+$GBDIS --offset 28 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$30"
+$GBDIS --offset 30 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; rst \$38"
+$GBDIS --offset 38 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+
+# first do the interrupt vector table
+echo "; v-blank irq"
+$GBDIS --offset 40 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; lcd stat irq"
+$GBDIS --offset 48 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; timer irq"
+$GBDIS --offset 50 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; serial irq"
+$GBDIS --offset 58 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+echo "; joypad irq"
+$GBDIS --offset 60 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+
+# and the rest until the header
+echo "; end of rst/interrupt vector table"
+$GBDIS --offset 68 --length 98 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+
+# then do the header
+echo ".org \$100"
+echo
+echo "; cartridge header"
+
+# read the 4 byte entry program
+echo "; program entry"
+$GBDIS --offset 100 --length 4 $OPTIONS < $FILE
+echo
+
+# only include the raw header bytes if the header directives aren't used
+if [ $HEADER_DIRECTIVES == false ]
+then
+	# include the nintendo logo
+	echo "; nintento logo"
+	$GBDIS --offset 104 --length 30 --db $OPTIONS < $FILE
+	echo
+
+	# and the rest of the header
+	echo "; various header bytes"
+	$GBDIS --offset 134 --length 1c --db $OPTIONS < $FILE
+	echo
+fi
+
+# then then rest of the home bank
+echo ".org \$150"
+echo
+echo "; end of cartridge header"
+$GBDIS --offset 150 --length 3eb0 $OPTIONS --locations $JUMPS_ALL < $FILE
+echo
+
+# now to loop through the rest of the banks!
+BANK=1
+while [ $BANK -lt $BANKS ]
+do
+	echo ".bank $BANK slot 1"
+	echo ".org \$0"
+	echo
+	let "SKIP = ($BANK - 1) * 0x4000"
+
+	if [ $LABELS == true ]
+	then
+		JUMPS=`$GBDIS --offset 4000 --length 4000 --skip \`printf "%X" $SKIP\` --find < $FILE`
+		JUMPS="$JUMPS_HOME $JUMPS"
+		JUMPS=`echo \`printf '%s\n' $JUMPS | sort -u\``
+	fi
+
+	$GBDIS --offset 4000 --length 4000 --skip `printf "%X" $SKIP` $OPTIONS --locations $JUMPS < $FILE
+	((BANK++))
+done
