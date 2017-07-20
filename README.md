@@ -9,7 +9,7 @@ _Tested with tetris.gb and harvestmoongb.gbc, woohoo_
 ## Example usage
 
 Do this to disassemble tetris:
-`gbdisasm tetris.gb > tetris.asm`
+`./gbdisasm tetris.gb > tetris.asm`
 
 And (if you have wla-gb) do this to reassemble it real quick for test:
 `echo "[objects]\ntetris.o" > link && wla-gb -o tetris.o tetris.asm && wlalink link tetris_again.gb && rm link && rm tetris.o'
