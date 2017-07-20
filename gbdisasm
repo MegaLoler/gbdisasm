@@ -56,8 +56,8 @@ then
 fi
 
 # some commentary at the top of the output
-echo "; disassembled by gbdisasm"
-echo "; written by megaloler/aardbei <megalolerl9000@gmail.com>"
+echo "; disassembled by gbdisasm https://github.com/MegaLoler/gbdisasm"
+echo "; written by megaloler/aardbei <megaloler9000@gmail.com>"
 echo "; dissasembly of file \"$FILE\""
 echo
 
