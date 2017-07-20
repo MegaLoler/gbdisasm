@@ -12,7 +12,7 @@ Do this to disassemble tetris:
 `./gbdisasm tetris.gb > tetris.asm`
 
 And (if you have wla-gb) do this to reassemble it real quick for test:
-`echo "[objects]\ntetris.o" > link && wla-gb -o tetris.o tetris.asm && wlalink link tetris_again.gb && rm link && rm tetris.o'
+`echo "[objects]\ntetris.o" > link && wla-gb -o tetris.o tetris.asm && wlalink link tetris_again.gb && rm link && rm tetris.o`
 
 Check and see that it reassembled unaltered if you like (it should say nothing):
 `diff tetris.gb tetris_again.gb`
