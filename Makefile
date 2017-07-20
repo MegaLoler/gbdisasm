@@ -1,4 +1,11 @@
+default_target: all
+
 all: gbdis gbinfo gen_test
+
+install:
+	cp gbdisasm /usr/local/bin
+	cp gbdis /usr/local/bin
+	cp gbinfo /usr/local/bin
 
 gbinfo:
 	gcc -o gbinfo gbinfo.c

@@ -16,8 +16,8 @@
 
 # program vars
 FILE=$1 # the file to disassemble
-GBINFO="./gbinfo" # the gbinfo program
-GBDIS="./gbdis" # the gbdis program
+GBINFO="gbinfo" # the gbinfo program
+GBDIS="gbdis" # the gbdis program
 shift
 OPTIONS=$@ # options to pass to the dissasembler
 LABELS=false # generate labels? *experimental*
@@ -110,53 +110,7 @@ echo
 
 # starting with the rst/interrupt vector table
 echo "; rst/interrupt vector table"
-
-# first do the rst vector table
-echo "; rst \$00"
-$GBDIS --offset 0 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$08"
-$GBDIS --offset 8 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$10"
-$GBDIS --offset 10 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$18"
-$GBDIS --offset 18 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$20"
-$GBDIS --offset 20 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$28"
-$GBDIS --offset 28 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$30"
-$GBDIS --offset 30 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; rst \$38"
-$GBDIS --offset 38 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-
-# first do the interrupt vector table
-echo "; v-blank irq"
-$GBDIS --offset 40 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; lcd stat irq"
-$GBDIS --offset 48 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; timer irq"
-$GBDIS --offset 50 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; serial irq"
-$GBDIS --offset 58 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-echo "; joypad irq"
-$GBDIS --offset 60 --length 8 $OPTIONS --locations $JUMPS_ALL < $FILE
-echo
-
-# and the rest until the header
-echo "; end of rst/interrupt vector table"
-$GBDIS --offset 68 --length 98 $OPTIONS --locations $JUMPS_ALL < $FILE
+$GBDIS --offset 0 --length 100 $OPTIONS --locations $JUMPS_ALL < $FILE
 echo
 
 # then do the header
