@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # TODO:
 # make the header reassemble correctly!! (for now just set HEADER_DIRECTIVES=false)
